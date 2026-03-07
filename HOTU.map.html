@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HOTU.map — чисто, современно, надёжно</title>
+    
+    <!-- Tailwind + Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Глобальные переменные и базовые стили */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg: #0b0f17;
+            --surface: #131a28;
+            --surface-light: #1e293b;
+            --primary: #3b82f6;
+            --primary-glow: rgba(59,130,246,0.3);
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #2d3a4f;
+            --danger: #ef4444;
+            --success: #10b981;
+            --card-bg: rgba(20, 30, 45, 0.8);
+        }
+
+        [data-theme="light"] {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --surface-light: #e2e8f0;
+            --primary: #2563eb;
+            --primary-glow: rgba(37,99,235,0.2);
+            --text: #0f172a;
+            --text-muted: #475569;
+            --border: #cbd5e1;
+            --card-bg: rgba(255,255,255,0.7);
+        }
+
+        [data-theme="forest"] {
+            --bg: #0a2f1f;
+            --surface: #1a3f2a;
+            --surface-light: #2b5a3a;
+            --primary: #4ade80;
+            --primary-glow: rgba(74,222,128,0.2);
+            --text: #ecfdf3;
+            --text-muted: #a7f3d0;
+            --border: #2d6a4f;
+            --card-bg: rgba(20, 60, 30, 0.8);
+        }
+
+        [data-theme="sunset"] {
+            --bg: #2d1a1a;
+            --surface: #4a2c2c;
+            --surface-light: #6b3f3f;
+            --primary: #f97316;
+            --primary-glow: rgba(249,115,22,0.2);
+            --text: #fff7ed;
+            --text-muted: #fed7aa;
+            --border: #b45309;
+            --card-bg: rgba(70, 30, 20, 0.8);
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            transition: background-color 0.3s, color 0.2s;
+        }
+
+        /* Стекло */
+        .glass {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 15px 35px -10px rgba(0,0,0,0.3);
+        }
+
+        .glass-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            transition: all 0.2s;
+        }
+
+        .glass-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 8px 20px -8px var(--primary-glow);
+        }
+
+        /* Скролл */
+        .scroll-custom::-webkit-scrollbar { width: 5px; }
+        .scroll-custom::-webkit-scrollbar-track { background: transparent; }
+        .scroll-custom::-webkit-scrollbar-thumb { background: var(--border); border-radius: 20px; }
+
+        /* Анимации */
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 var(--primary-glow); }
+            70% { box-shadow: 0 0 0 8px transparent; }
+        }
+        .pulse-primary {
+            animation: pulse-glow 2s infinite;
+        }
+
+        .route-progress-bar {
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            height: 6px;
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+
+        .temp-value {
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Mobile menu */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 85%;
+                max-width: 360px;
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 60;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .menu-toggle {
+                display: flex;
+            }
+            .weather-floating {
+                top: 1rem;
+                right: 1rem;
+                min-width: 160px;
+                padding: 0.75rem;
+            }
+        }
+        @media (min-width: 769px) {
+            .sidebar {
+                width: 380px;
+            }
+            .menu-toggle {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="h-screen" data-theme="dark">
+
+    <!-- Профиль модалка -->
+    <div id="profile-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm" onclick="if(event.target===this) closeProfile()">
+        <div class="glass-card w-full max-w-md mx-4 p-6">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-xl font-semibold flex items-center gap-2"><i class="fas fa-user-circle text-[var(--primary)]"></i> Профиль</h2>
+                <button onclick="closeProfile()" class="w-8 h-8 rounded-full hover:bg-white/10"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm text-[var(--text-muted)] mb-1">Ваше имя</label>
+                <input type="text" id="profile-name" placeholder="Как к вам обращаться?" class="w-full bg-white/5 border border-[var(--border)] rounded-xl px-4 py-2.5 text-sm focus:border-[var(--primary)] outline-none">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm text-[var(--text-muted)] mb-3">Аватар</label>
+                <div class="flex gap-4 justify-center">
+                    <div class="avatar-option w-14 h-14 rounded-full flex items-center justify-center text-2xl bg-white/5 border-2 border-transparent cursor-pointer hover:border-[var(--primary)]" data-avatar="fa-user"><i class="fas fa-user"></i></div>
+                    <div class="avatar-option w-14 h-14 rounded-full flex items-center justify-center text-2xl bg-white/5 border-2 border-transparent cursor-pointer hover:border-[var(--primary)]" data-avatar="fa-compass"><i class="fas fa-compass"></i></div>
+                    <div class="avatar-option w-14 h-14 rounded-full flex items-center justify-center text-2xl bg-white/5 border-2 border-transparent cursor-pointer hover:border-[var(--primary)]" data-avatar="fa-map-pin"><i class="fas fa-map-pin"></i></div>
+                    <div class="avatar-option w-14 h-14 rounded-full flex items-center justify-center text-2xl bg-white/5 border-2 border-transparent cursor-pointer hover:border-[var(--primary)]" data-avatar="fa-mountain-sun"><i class="fas fa-mountain-sun"></i></div>
+                </div>
+            </div>
+            <button onclick="saveProfile()" class="w-full bg-[var(--primary)] text-white font-medium py-3 rounded-xl hover:brightness-110 transition">Сохранить</button>
+        </div>
+    </div>
+
+    <!-- Настройки модалка -->
+    <div id="settings-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm" onclick="if(event.target===this) closeSettings()">
+        <div class="glass-card w-full max-w-lg mx-4 p-6">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-xl font-semibold flex items-center gap-2"><i class="fas fa-cog text-[var(--primary)]"></i> Настройки</h2>
+                <button onclick="closeSettings()" class="w-8 h-8 rounded-full hover:bg-white/10"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mb-6">
+                <h3 class="text-sm font-medium text-[var(--text-muted)] mb-3">Тема</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="setTheme('dark')" class="theme-btn p-3 rounded-xl border-2 border-[var(--primary)] bg-slate-800 text-white" data-theme="dark">🌙 Тёмная</button>
+                    <button onclick="setTheme('light')" class="theme-btn p-3 rounded-xl border-2 border-transparent bg-white text-black" data-theme="light">☀️ Светлая</button>
+                    <button onclick="setTheme('forest')" class="theme-btn p-3 rounded-xl border-2 border-transparent bg-green-800 text-green-100" data-theme="forest">🌲 Тайга</button>
+                    <button onclick="setTheme('sunset')" class="theme-btn p-3 rounded-xl border-2 border-transparent bg-orange-800 text-orange-100" data-theme="sunset">🌅 Закат</button>
+                </div>
+            </div>
+            <div class="mb-6 flex items-center justify-between p-3 rounded-xl bg-white/5">
+                <span class="flex items-center gap-3"><i class="fas fa-cloud-sun text-[var(--primary)]"></i> Показывать погоду на карте</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="setting-weather" class="sr-only peer" checked onchange="toggleWeatherWidget()">
+                    <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary)]"></div>
+                </label>
+            </div>
+            <button onclick="closeSettings()" class="w-full bg-[var(--primary)] text-white font-medium py-3 rounded-xl">Готово</button>
+        </div>
+    </div>
+
+    <!-- SOS модалка -->
+    <div id="sos-modal" class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/70 backdrop-blur-md" onclick="if(event.target===this) closeSOS()">
+        <div class="glass-card w-full max-w-md mx-4 p-6 border border-[var(--danger)]/50">
+            <div class="text-center mb-5">
+                <div class="w-20 h-20 mx-auto rounded-full bg-[var(--danger)]/20 flex items-center justify-center relative">
+                    <div class="absolute inset-0 rounded-full bg-[var(--danger)]/30 animate-ping"></div>
+                    <i class="fas fa-exclamation-triangle text-4xl text-[var(--danger)] relative z-10"></i>
+                </div>
+                <h2 class="text-2xl font-bold mt-3">Экстренный вызов</h2>
+                <p class="text-sm text-[var(--text-muted)]">Ваши координаты: 62.0278° N, 129.7326° E</p>
+            </div>
+            <div class="bg-black/20 rounded-xl p-4 mb-5 font-mono text-sm space-y-2">
+                <div class="flex justify-between"><span class="text-[var(--text-muted)]">Время:</span><span class="text-[var(--primary)]" id="sos-time">--:--:--</span></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeSOS()" class="py-3 rounded-xl border border-[var(--border)] hover:bg-white/5">Отмена</button>
+                <button onclick="confirmSOS(this)" class="py-3 rounded-xl bg-[var(--danger)] text-white font-semibold shadow-lg shadow-[var(--danger)]/50 animate-pulse">Вызвать 112</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Затемнение для мобильного меню -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-50 hidden md:hidden" onclick="closeSidebar()"></div>
+
+    <div class="flex h-full">
+        <!-- Боковая панель (sidebar) -->
+        <aside id="sidebar" class="sidebar glass h-full flex flex-col border-r border-[var(--border)] z-60 overflow-hidden">
+            <!-- Шапка -->
+            <div class="p-5 border-b border-[var(--border)]">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-2xl bg-[var(--primary)]/20 flex items-center justify-center">
+                            <i class="fas fa-location-dot text-xl text-[var(--primary)]"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-lg">HOTU<span class="text-[var(--primary)]">.map</span></h1>
+                            <div class="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                                <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> живые данные
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div id="profile-avatar" class="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center cursor-pointer hover:scale-105 transition" onclick="openProfile()">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                        <button onclick="openSettings()" class="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center">
+                            <i class="fas fa-cog text-[var(--text-muted)]"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Часы и дата компактно -->
+                <div class="mt-4 flex items-center justify-between bg-black/20 rounded-xl px-4 py-2.5 text-sm">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-clock text-[var(--primary)]"></i>
+                        <span class="font-mono temp-value" id="header-clock">--:--:--</span>
+                    </div>
+                    <span class="text-[var(--text-muted)]" id="header-date">--.--.----</span>
+                </div>
+
+                <!-- Поиск (упрощённый) -->
+                <div class="relative mt-3">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm"></i>
+                    <input type="text" placeholder="Найти место..." class="w-full bg-black/20 border border-[var(--border)] rounded-full py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-[var(--primary)]">
+                </div>
+            </div>
+
+            <!-- Табы: только Маршрут и Погода -->
+            <div class="flex gap-1 p-2 border-b border-[var(--border)]">
+                <button onclick="switchTab('route')" id="tab-route" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all bg-[var(--primary)] text-white shadow">Маршрут</button>
+                <button onclick="switchTab('weather')" id="tab-weather" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all bg-transparent text-[var(--text-muted)] hover:bg-white/5">Погода</button>
+            </div>
+
+            <!-- Контент -->
+            <div class="flex-1 overflow-y-auto scroll-custom p-4" id="sidebar-content">
+                <!-- Маршрут -->
+                <div id="content-route" class="space-y-4">
+                    <div class="glass-card p-5">
+                        <h3 class="font-medium flex items-center gap-2 mb-4"><i class="fas fa-route text-[var(--primary)]"></i> Построить маршрут</h3>
+                        <div class="space-y-3">
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                                <input type="text" id="route-from" value="Якутск, Ленина 1" class="w-full bg-black/20 border border-[var(--border)] rounded-xl pl-10 pr-4 py-3 text-sm focus:border-green-500/50 outline-none">
+                            </div>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                <input type="text" id="route-to" placeholder="Куда?" class="w-full bg-black/20 border border-[var(--border)] rounded-xl pl-10 pr-4 py-3 text-sm focus:border-red-500/50 outline-none">
+                            </div>
+                            <button onclick="swapRoute()" class="absolute right-6 mt-[-32px] w-7 h-7 rounded-full bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center hover:bg-white/10">
+                                <i class="fas fa-arrow-down-arrow-up text-xs"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex gap-2 mt-4">
+                            <button onclick="setRouteType('car')" class="route-type-btn flex-1 py-2 rounded-lg bg-[var(--primary)]/20 border border-[var(--primary)]/30 text-[var(--primary)] text-xs font-medium" data-type="car"><i class="fas fa-car mr-1"></i>Авто</button>
+                            <button onclick="setRouteType('walk')" class="route-type-btn flex-1 py-2 rounded-lg bg-white/5 border border-[var(--border)] text-[var(--text-muted)] text-xs font-medium" data-type="walk"><i class="fas fa-walking mr-1"></i>Пешком</button>
+                        </div>
+
+                        <button onclick="buildRoute()" class="w-full mt-5 py-3 rounded-xl bg-[var(--primary)] text-white font-medium hover:brightness-110 transition flex items-center justify-center gap-2">
+                            <i class="fas fa-arrow-right"></i> Построить
+                        </button>
+                    </div>
+
+                    <!-- Активный маршрут (скрыт по умолчанию) -->
+                    <div id="active-route" class="glass-card p-5 hidden border-l-4 border-l-[var(--primary)]">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold">Активный маршрут</h4>
+                            <button onclick="cancelRoute()" class="text-[var(--danger)]"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="flex justify-around mb-4">
+                            <div class="text-center"><span class="text-2xl font-bold temp-value" id="route-time">45</span> <span class="text-sm text-[var(--text-muted)]">мин</span></div>
+                            <div class="w-px bg-[var(--border)]"></div>
+                            <div class="text-center"><span class="text-2xl font-bold temp-value" id="route-dist">12.5</span> <span class="text-sm text-[var(--text-muted)]">км</span></div>
+                            <div class="w-px bg-[var(--border)]"></div>
+                            <div class="text-center"><span class="text-2xl font-bold temp-value text-[var(--success)]" id="route-arrival">14:30</span> <span class="text-sm text-[var(--text-muted)]">приб.</span></div>
+                        </div>
+                        <div class="bg-black/20 rounded-lg p-3 mb-4">
+                            <div class="flex justify-between text-xs mb-1"><span>Прогресс</span><span id="route-progress-text">0%</span></div>
+                            <div class="h-2 bg-white/10 rounded-full"><div class="route-progress-bar" id="route-progress-bar" style="width:0%"></div></div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="startNavigation()" id="nav-btn" class="flex-1 py-2.5 rounded-lg bg-[var(--success)] text-white font-medium text-sm flex items-center justify-center gap-2"><i class="fas fa-play"></i>Старт</button>
+                            <button onclick="pauseNavigation()" id="pause-btn" class="hidden flex-1 py-2.5 rounded-lg bg-[var(--warning)] text-white font-medium text-sm items-center justify-center gap-2"><i class="fas fa-pause"></i>Пауза</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Погода -->
+                <div id="content-weather" class="hidden space-y-4">
+                    <div class="glass-card p-5 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-[var(--primary)]/20 rounded-full blur-3xl"></div>
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs text-[var(--text-muted)] flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Якутск сейчас</span>
+                                    <div class="text-5xl font-bold mt-1 temp-value flex items-start"><span id="current-temp">--</span><span class="text-2xl">°C</span></div>
+                                    <div class="text-sm text-[var(--primary)] mt-1" id="weather-desc">загрузка...</div>
+                                </div>
+                                <i class="fas fa-snowflake text-5xl text-[var(--primary)] opacity-70" id="weather-icon"></i>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 mt-5">
+                                <div class="text-center p-2 bg-white/5 rounded-xl"><i class="fas fa-wind text-[var(--text-muted)]"></i><div class="font-semibold temp-value" id="wind-speed">--</div><div class="text-[10px]">км/ч</div></div>
+                                <div class="text-center p-2 bg-white/5 rounded-xl"><i class="fas fa-droplet text-[var(--text-muted)]"></i><div class="font-semibold temp-value" id="humidity">--</div><div class="text-[10px]">%</div></div>
+                                <div class="text-center p-2 bg-white/5 rounded-xl"><i class="fas fa-eye text-[var(--text-muted)]"></i><div class="font-semibold temp-value" id="visibility">--</div><div class="text-[10px]">км</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Прогноз 7 дней -->
+                    <div class="glass-card p-5">
+                        <h4 class="text-sm font-medium mb-3 flex items-center gap-2"><i class="fas fa-calendar-alt text-[var(--primary)]"></i> Прогноз 7 дней</h4>
+                        <div class="space-y-2" id="weather-forecast"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Нижние кнопки -->
+            <div class="p-4 border-t border-[var(--border)] grid grid-cols-2 gap-3">
+                <button onclick="toggleSOS()" class="py-3 rounded-xl bg-[var(--danger)]/20 border border-[var(--danger)]/30 text-[var(--danger)] hover:bg-[var(--danger)]/30 font-medium text-sm flex items-center justify-center gap-2"><i class="fas fa-exclamation-triangle"></i> SOS</button>
+                <button onclick="shareRoute()" class="py-3 rounded-xl bg-[var(--primary)]/20 border border-[var(--primary)]/30 text-[var(--primary)] hover:bg-[var(--primary)]/30 font-medium text-sm flex items-center justify-center gap-2"><i class="fas fa-share-alt"></i> Поделиться</button>
+            </div>
+        </aside>
+
+        <!-- Основная область: карта -->
+        <main class="flex-1 relative bg-gray-900">
+            <div id="map-loader" class="absolute inset-0 z-30 flex items-center justify-center bg-[var(--bg)]">
+                <div class="text-center"><div class="w-10 h-10 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div><p class="text-sm text-[var(--text-muted)]">Загрузка карты...</p></div>
+            </div>
+
+            <button id="menu-toggle" class="menu-toggle absolute top-5 left-5 z-50 w-11 h-11 rounded-2xl glass items-center justify-center text-xl" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <!-- Iframe карты -->
+            <iframe 
+                src="https://www.google.com/maps/d/embed?mid=1rsm5yB66oLGS9m6dwiH6yLAZorVIGD8&ehbc=2E312F" 
+                class="w-full h-full border-0"
+                allowfullscreen
+                loading="lazy"
+                onload="document.getElementById('map-loader').style.display='none'; initSystems()">
+            </iframe>
+
+            <!-- Плавающий виджет погоды -->
+            <div id="weather-widget" class="absolute top-5 right-5 z-40 glass rounded-2xl p-4 min-w-[180px] shadow-2xl">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-[var(--text-muted)]"><i class="fas fa-map-pin mr-1 text-[var(--primary)]"></i> Якутск</span>
+                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-snowflake text-3xl text-[var(--primary)]" id="widget-icon"></i>
+                    <div><span class="text-3xl font-bold temp-value" id="widget-temp">--°</span><div class="text-xs text-[var(--text-muted)]" id="widget-desc">--</div></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
+                    <div><span class="text-[var(--text-muted)]">Ветер</span><div class="font-medium temp-value" id="widget-wind">-- км/ч</div></div>
+                    <div><span class="text-[var(--text-muted)]">Влажн.</span><div class="font-medium temp-value" id="widget-humidity">--%</div></div>
+                </div>
+            </div>
+
+            <!-- Нижний статус-бар -->
+            <div class="absolute bottom-5 left-5 right-5 md:left-5 md:right-auto z-40 glass rounded-2xl px-5 py-3 flex items-center gap-6 text-sm">
+                <div class="flex items-center gap-2"><span class="w-2 h-2 bg-green-500 rounded-full"></span><span class="text-[var(--text-muted)]">GPS</span><span class="font-medium">активен</span></div>
+                <div class="flex items-center gap-2"><i class="fas fa-wifi text-[var(--primary)]"></i><span class="text-[var(--text-muted)]">Сигнал</span><span class="font-medium">отл.</span></div>
+                <div class="flex items-center gap-2"><i class="fas fa-clock text-[var(--primary)]"></i><span class="font-mono temp-value" id="status-clock">--:--:--</span></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ------------------------------------------------------------
+        // ГЛОБАЛЬНЫЕ ДАННЫЕ
+        // ------------------------------------------------------------
+        let currentTheme = 'dark';
+        let weatherInterval, clockInterval, routeInterval;
+        let isNavigating = false, navigationPaused = false;
+        let profile = { name: 'Гость', avatar: 'fa-user' };
+
+        // ------------------------------------------------------------
+        // ИНИЦИАЛИЗАЦИЯ
+        // ------------------------------------------------------------
+        function initSystems() {
+            initClock();
+            initWeather();
+            loadSettings();
+            loadProfile();
+            setupPWA();
+        }
+
+        // ------------------------------------------------------------
+        // PWA (manifest + service worker)
+        // ------------------------------------------------------------
+        function setupPWA() {
+            const manifest = {
+                name: "HOTU.map",
+                short_name: "HOTU.map",
+                description: "Чистый навигатор для Якутии",
+                start_url: window.location.href,
+                display: "standalone",
+                background_color: "#0b0f17",
+                theme_color: "#3b82f6",
+                icons: [{ src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%233b82f6'/%3E%3Ctext x='50' y='70' font-size='50' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E", sizes: "192x512", type: "image/svg+xml" }]
+            };
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type:'application/json'}));
+            document.head.appendChild(link);
+            if ('serviceWorker' in navigator) {
+                const sw = `const CACHE='hotu-v1';self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./','https://cdn.tailwindcss.com','https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css']))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
+                navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw], {type:'application/javascript'})));
+            }
+        }
+
+        // ------------------------------------------------------------
+        // ПРОФИЛЬ
+        // ------------------------------------------------------------
+        function loadProfile() {
+            const saved = localStorage.getItem('hotu-profile');
+            if (saved) profile = JSON.parse(saved);
+            updateProfileUI();
+        }
+        function saveProfile() {
+            const name = document.getElementById('profile-name').value.trim();
+            if (name) profile.name = name;
+            const sel = document.querySelector('.avatar-option.selected');
+            if (sel) profile.avatar = sel.dataset.avatar;
+            localStorage.setItem('hotu-profile', JSON.stringify(profile));
+            updateProfileUI();
+            closeProfile();
+        }
+        function updateProfileUI() {
+            const av = document.getElementById('profile-avatar');
+            av.innerHTML = `<i class="fas ${profile.avatar || 'fa-user'} text-white"></i>`;
+            av.title = profile.name || 'Гость';
+        }
+        function openProfile() {
+            document.getElementById('profile-name').value = profile.name || '';
+            document.querySelectorAll('.avatar-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.dataset.avatar === profile.avatar);
+            });
+            document.getElementById('profile-modal').classList.remove('hidden');
+            document.getElementById('profile-modal').classList.add('flex');
+        }
+        function closeProfile() {
+            document.getElementById('profile-modal').classList.add('hidden');
+            document.getElementById('profile-modal').classList.remove('flex');
+        }
+        document.querySelectorAll('.avatar-option').forEach(opt => {
+            opt.addEventListener('click', function() {
+                document.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+
+        // ------------------------------------------------------------
+        // ЧАСЫ
+        // ------------------------------------------------------------
+        function initClock() {
+            updateClock();
+            clockInterval = setInterval(updateClock, 1000);
+        }
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('header-clock').textContent = now.toLocaleTimeString('ru-RU', {hour12:false});
+            document.getElementById('status-clock').textContent = now.toLocaleTimeString('ru-RU', {hour12:false});
+            document.getElementById('header-date').textContent = now.toLocaleDateString('ru-RU');
+            document.getElementById('sos-time').textContent = now.toLocaleTimeString('ru-RU', {hour12:false});
+        }
+
+        // ------------------------------------------------------------
+        // ПОГОДА
+        // ------------------------------------------------------------
+        async function initWeather() {
+            await fetchWeather();
+            weatherInterval = setInterval(fetchWeather, 600000);
+        }
+        async function fetchWeather() {
+            try {
+                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=62.0339&longitude=129.7331&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,is_day&hourly=visibility&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia/Yakutsk&forecast_days=7');
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                if (data.hourly?.visibility) {
+                    const idx = data.hourly.time.findIndex(t => new Date(t) > new Date()) - 1;
+                    data.current.visibility = data.hourly.visibility[idx] || 10000;
+                }
+                updateWeatherUI(data);
+            } catch {
+                useFallbackWeather();
+            }
+        }
+        function getWeatherCondition(code, isDay) {
+            const map = {
+                0:{text:'Ясно', icon:isDay?'fa-sun':'fa-moon'},1:{text:'Облачно', icon:'fa-cloud-sun'},2:{text:'Пасмурно', icon:'fa-cloud'},
+                3:{text:'Пасмурно', icon:'fa-cloud'},45:{text:'Туман', icon:'fa-smog'},61:{text:'Дождь', icon:'fa-cloud-rain'},
+                71:{text:'Снег', icon:'fa-snowflake'},95:{text:'Гроза', icon:'fa-bolt'}
+            };
+            return map[code] || {text:'—', icon:'fa-question'};
+        }
+        function updateWeatherUI(data) {
+            const c = data.current;
+            const daily = data.daily;
+            const cond = getWeatherCondition(c.weather_code, c.is_day);
+            const temp = Math.round(c.temperature_2m);
+            document.getElementById('current-temp').textContent = temp;
+            document.getElementById('weather-desc').textContent = cond.text;
+            document.getElementById('weather-icon').className = `fas ${cond.icon} text-5xl text-[var(--primary)] opacity-70`;
+            document.getElementById('wind-speed').textContent = Math.round(c.wind_speed_10m);
+            document.getElementById('humidity').textContent = c.relative_humidity_2m;
+            document.getElementById('visibility').textContent = (c.visibility/1000).toFixed(1);
+            document.getElementById('widget-temp').textContent = temp+'°';
+            document.getElementById('widget-desc').textContent = cond.text;
+            document.getElementById('widget-icon').className = `fas ${cond.icon} text-3xl text-[var(--primary)]`;
+            document.getElementById('widget-wind').textContent = Math.round(c.wind_speed_10m)+' км/ч';
+            document.getElementById('widget-humidity').textContent = c.relative_humidity_2m+'%';
+            const forecast = document.getElementById('weather-forecast');
+            forecast.innerHTML = '';
+            const days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+            for (let i=0; i<7; i++) {
+                const d = new Date(daily.time[i]);
+                const dayName = i===0 ? 'Сегодня' : days[d.getDay()];
+                const max = Math.round(daily.temperature_2m_max[i]);
+                const min = Math.round(daily.temperature_2m_min[i]);
+                const condD = getWeatherCondition(daily.weather_code[i],1);
+                forecast.innerHTML += `<div class="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+                    <span class="font-medium w-16">${dayName}</span>
+                    <i class="fas ${condD.icon} text-[var(--primary)] w-6 text-center"></i>
+                    <span><span class="font-bold">${max}°</span> <span class="text-[var(--text-muted)]">${min}°</span></span>
+                </div>`;
+            }
+        }
+        function useFallbackWeather() {
+            updateWeatherUI({
+                current:{temperature_2m:-32,wind_speed_10m:12,relative_humidity_2m:75,visibility:8000,weather_code:71,is_day:1},
+                daily:{time:Array(7).fill().map((_,i)=>new Date(Date.now()+i*864e5).toISOString()),temperature_2m_max:[-28,-25,-22,-20,-18,-15,-12],temperature_2m_min:[-35,-32,-30,-28,-25,-22,-20],weather_code:[71,71,73,71,3,71,73]}
+            });
+        }
+        function refreshWeather() { fetchWeather(); }
+        function toggleWeatherWidget() {
+            const w = document.getElementById('weather-widget');
+            w.style.display = document.getElementById('setting-weather').checked ? 'block' : 'none';
+        }
+
+        // ------------------------------------------------------------
+        // МАРШРУТЫ
+        // ------------------------------------------------------------
+        function setRouteType(type) {
+            document.querySelectorAll('.route-type-btn').forEach(btn => {
+                btn.classList.remove('bg-[var(--primary)]/20','border-[var(--primary)]/30','text-[var(--primary)]');
+                btn.classList.add('bg-white/5','border-[var(--border)]','text-[var(--text-muted)]');
+            });
+            const active = document.querySelector(`.route-type-btn[data-type="${type}"]`);
+            if (active) active.classList.replace('bg-white/5','bg-[var(--primary)]/20'), active.classList.replace('border-[var(--border)]','border-[var(--primary)]/30'), active.classList.replace('text-[var(--text-muted)]','text-[var(--primary)]');
+        }
+        function swapRoute() {
+            const from = document.getElementById('route-from'), to = document.getElementById('route-to');
+            [from.value, to.value] = [to.value, from.value];
+        }
+        function buildRoute() {
+            if (!document.getElementById('route-to').value) return alert('Укажите куда');
+            document.getElementById('active-route').classList.remove('hidden');
+            const arrival = new Date(Date.now() + 45*60000);
+            document.getElementById('route-arrival').textContent = arrival.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+            document.getElementById('route-time').textContent = '45';
+            isNavigating = false; navigationPaused = false; updateNavButtons();
+        }
+        function startNavigation() {
+            if (isNavigating) return;
+            isNavigating = true; navigationPaused = false; updateNavButtons();
+            let progress = 0;
+            routeInterval = setInterval(() => {
+                if (navigationPaused) return;
+                progress += 1;
+                if (progress > 100) { clearInterval(routeInterval); completeRoute(); return; }
+                document.getElementById('route-progress-bar').style.width = progress+'%';
+                document.getElementById('route-progress-text').textContent = progress+'%';
+                const rem = Math.ceil((100-progress)/100*45);
+                document.getElementById('route-time').textContent = rem;
+                const arr = new Date(Date.now() + rem*60000);
+                document.getElementById('route-arrival').textContent = arr.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+            }, 1000);
+        }
+        function pauseNavigation() { navigationPaused = !navigationPaused; updateNavButtons(); }
+        function updateNavButtons() {
+            const start = document.getElementById('nav-btn'), pause = document.getElementById('pause-btn');
+            if (!isNavigating) { start.classList.remove('hidden'); pause.classList.add('hidden'); }
+            else { start.classList.add('hidden'); pause.classList.remove('hidden'); pause.innerHTML = navigationPaused ? '<i class=\"fas fa-play mr-2\"></i>Продолжить' : '<i class=\"fas fa-pause mr-2\"></i>Пауза'; }
+        }
+        function completeRoute() { alert('Вы прибыли!'); cancelRoute(); }
+        function cancelRoute() {
+            document.getElementById('active-route').classList.add('hidden');
+            clearInterval(routeInterval);
+            document.getElementById('route-progress-bar').style.width = '0%';
+            document.getElementById('route-progress-text').textContent = '0%';
+            isNavigating = false; navigationPaused = false; updateNavButtons();
+        }
+
+        // ------------------------------------------------------------
+        // UI (табы, настройки, тема, SOS)
+        // ------------------------------------------------------------
+        function switchTab(tab) {
+            ['route','weather'].forEach(t => {
+                document.getElementById(`content-${t}`)?.classList.add('hidden');
+                const btn = document.getElementById(`tab-${t}`);
+                if (btn) btn.className = 'flex-1 py-2.5 rounded-xl text-sm font-medium bg-transparent text-[var(--text-muted)] hover:bg-white/5';
+            });
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            if (activeBtn) activeBtn.className = 'flex-1 py-2.5 rounded-xl text-sm font-medium bg-[var(--primary)] text-white shadow';
+        }
+        function openSettings() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            document.getElementById('settings-modal').classList.add('flex');
+            updateThemeButtons();
+        }
+        function closeSettings() {
+            document.getElementById('settings-modal').classList.add('hidden');
+            document.getElementById('settings-modal').classList.remove('flex');
+            saveSettings();
+        }
+        function setTheme(theme) {
+            currentTheme = theme;
+            document.body.dataset.theme = theme;
+            updateThemeButtons();
+        }
+        function updateThemeButtons() {
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.toggle('border-[var(--primary)]', btn.dataset.theme === currentTheme);
+                btn.classList.toggle('border-transparent', btn.dataset.theme !== currentTheme);
+            });
+        }
+        function saveSettings() {
+            localStorage.setItem('hotu-navigator-v2', JSON.stringify({
+                theme: currentTheme,
+                weather: document.getElementById('setting-weather').checked
+            }));
+        }
+        function loadSettings() {
+            const saved = localStorage.getItem('hotu-navigator-v2');
+            if (saved) {
+                const s = JSON.parse(saved);
+                if (s.theme) setTheme(s.theme);
+                document.getElementById('setting-weather').checked = s.weather !== false;
+                toggleWeatherWidget();
+            }
+        }
+        function toggleSOS() { document.getElementById('sos-modal').classList.add('flex'); }
+        function closeSOS() { document.getElementById('sos-modal').classList.remove('flex'); }
+        function confirmSOS(btn) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-check mr-2"></i>Отправлено';
+                btn.classList.replace('bg-[var(--danger)]','bg-[var(--success)]');
+                setTimeout(() => { closeSOS(); alert('Сигнал SOS отправлен!'); }, 1000);
+            }, 1500);
+        }
+        function shareRoute() { navigator.clipboard?.writeText(window.location.href).then(() => alert('Ссылка скопирована')); }
+
+        // Мобильное меню
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebar-overlay').classList.toggle('hidden');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebar-overlay').classList.add('hidden');
+        }
+
+        // Очистка интервалов
+        window.addEventListener('beforeunload', () => {
+            clearInterval(weatherInterval);
+            clearInterval(clockInterval);
+            clearInterval(routeInterval);
+        });
+    </script>
+</body>
+</html>
